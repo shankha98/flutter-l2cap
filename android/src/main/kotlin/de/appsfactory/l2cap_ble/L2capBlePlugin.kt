@@ -24,14 +24,22 @@ class L2capBlePlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHand
     /// This local reference serves to register the plugin with the Flutter Engine and unregister it
     /// when the Flutter Engine is detached from the Activity
     private lateinit var channel: MethodChannel
-    private var mEventSink: EventChannel.EventSink? = null
+    private lateinit var connectionStateEventChannel: EventChannel
+    private lateinit var incomingDataEventChannel: EventChannel
+    private var connectionStateEventSink: EventChannel.EventSink? = null
+    private var incomingDataEventSink: EventChannel.EventSink? = null
     private lateinit var bleL2capImpl: BleL2capImpl
 
     override fun onAttachedToEngine(@NonNull flutterPluginBinding: FlutterPlugin.FlutterPluginBinding) {
         channel = MethodChannel(flutterPluginBinding.binaryMessenger, "l2cap_ble")
         channel.setMethodCallHandler(this)
-        val eventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "getConnectionState")
-        eventChannel.setStreamHandler(this)
+        
+        connectionStateEventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "getConnectionState")
+        connectionStateEventChannel.setStreamHandler(ConnectionStateStreamHandler())
+        
+        incomingDataEventChannel = EventChannel(flutterPluginBinding.binaryMessenger, "getIncomingData")
+        incomingDataEventChannel.setStreamHandler(IncomingDataStreamHandler())
+        
         bleL2capImpl = BleL2capImpl(flutterPluginBinding.applicationContext, Dispatchers.IO)
     }
 
@@ -67,22 +75,65 @@ class L2capBlePlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHand
                     res.mapToResult(result)
                 }
             }
+        } else if (call.method == "startReceivingData") {
+            CoroutineScope(Dispatchers.Main).launch {
+                bleL2capImpl.startReceivingData().collect { res: KResult<Boolean> ->
+                    Log.d("L2capBlePlugin", "startReceivingData: $res")
+                    res.mapToResult(result)
+                }
+            }
+        } else if (call.method == "stopReceivingData") {
+            CoroutineScope(Dispatchers.Main).launch {
+                bleL2capImpl.stopReceivingData().collect { res: KResult<Boolean> ->
+                    Log.d("L2capBlePlugin", "stopReceivingData: $res")
+                    res.mapToResult(result)
+                }
+            }
         } else {
             result.notImplemented()
         }
     }
 
+    inner class ConnectionStateStreamHandler : EventChannel.StreamHandler {
+        override fun onListen(arguments: Any?, eventSink: EventChannel.EventSink?) {
+            connectionStateEventSink = eventSink
+            CoroutineScope(Dispatchers.Main).launch {
+                bleL2capImpl.connectionState.collect { state: ConnectionState ->
+                    Log.d("L2capBlePlugin", "ConnectionState: $state")
+                    connectionStateEventSink?.success(state.ordinal)
+                }
+            }
+        }
+
+        override fun onCancel(arguments: Any?) {
+            connectionStateEventSink = null
+        }
+    }
+
+    inner class IncomingDataStreamHandler : EventChannel.StreamHandler {
+        override fun onListen(arguments: Any?, eventSink: EventChannel.EventSink?) {
+            incomingDataEventSink = eventSink
+            CoroutineScope(Dispatchers.Main).launch {
+                bleL2capImpl.incomingData.collect { data: ByteArray ->
+                    Log.d("L2capBlePlugin", "Incoming data: ${data.size} bytes")
+                    incomingDataEventSink?.success(data)
+                }
+            }
+        }
+
+        override fun onCancel(arguments: Any?) {
+            incomingDataEventSink = null
+        }
+    }
+
     override fun onCancel(arguments: Any?) {
-        mEventSink = null
+        // This method is from the old EventChannel.StreamHandler interface
+        // We keep it for compatibility but it's not used anymore
     }
 
     override fun onListen(arguments: Any?, eventSink: EventChannel.EventSink?) {
-        CoroutineScope(Dispatchers.Main).launch {
-            bleL2capImpl.connectionState.collect { state: ConnectionState ->
-                Log.d("L2capBlePlugin", "ConnectionState: $state")
-                eventSink?.success(state.ordinal)
-            }
-        }
+        // This method is from the old EventChannel.StreamHandler interface
+        // We keep it for compatibility but it's not used anymore
     }
 
     private suspend fun KResult<Any>.mapToResult(@NonNull result: Result) {

@@ -9,10 +9,16 @@ class L2capBle {
       L2capBlePlatform.instance.disconnectFromDevice(deviceId);
   Stream<L2CapConnectionState> getConnectionState() =>
       L2capBlePlatform.instance.getConnectionState();
+  Stream<Uint8List> getIncomingData() =>
+      L2capBlePlatform.instance.getIncomingData();
   Future<bool> createL2capChannel(int psm) =>
       L2capBlePlatform.instance.createL2capChannel(psm);
   Future<Uint8List> sendMessage(Uint8List message) =>
       L2capBlePlatform.instance.sendMessage(message);
+  Future<bool> startReceivingData() =>
+      L2capBlePlatform.instance.startReceivingData();
+  Future<bool> stopReceivingData() =>
+      L2capBlePlatform.instance.stopReceivingData();
 }
 
 enum L2CapConnectionState {

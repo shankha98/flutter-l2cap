@@ -49,6 +49,17 @@ class MethodChannelL2capBle extends L2capBlePlatform {
   }
 
   @override
+  Stream<Uint8List> getIncomingData() {
+    final stream = const EventChannel('getIncomingData')
+        .receiveBroadcastStream()
+        .cast<Uint8List>();
+    return stream.asyncMap((data) {
+      debugPrint('received data: ${data.length} bytes');
+      return data;
+    });
+  }
+
+  @override
   Future<bool> createL2capChannel(int psm) async {
     final success = await methodChannel
         .invokeMethod<bool>('createL2capChannel', {'psm': psm});
@@ -60,5 +71,18 @@ class MethodChannelL2capBle extends L2capBlePlatform {
     final response = await methodChannel
         .invokeMethod<Uint8List>('sendMessage', {'message': message});
     return response ?? Uint8List.fromList([]);
+  }
+
+  @override
+  Future<bool> startReceivingData() async {
+    final success =
+        await methodChannel.invokeMethod<bool>('startReceivingData');
+    return success ?? false;
+  }
+
+  @override
+  Future<bool> stopReceivingData() async {
+    final success = await methodChannel.invokeMethod<bool>('stopReceivingData');
+    return success ?? false;
   }
 }

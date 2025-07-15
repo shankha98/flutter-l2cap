@@ -28,6 +28,9 @@ class BleL2capImpl(
 ) : BleL2cap {
 
     private val connectionStateSharedFlow = MutableSharedFlow<ConnectionState>()
+    private val incomingDataSharedFlow = MutableSharedFlow<ByteArray>()
+    private var isReceiving = false
+    private var receivingJob: kotlinx.coroutines.Job? = null
 
     private val bluetoothManager: BluetoothManager? by lazy {
         context.getSystemService(Context.BLUETOOTH_SERVICE) as? BluetoothManager?
@@ -41,6 +44,7 @@ class BleL2capImpl(
     private var bluetoothSocket: BluetoothSocket? = null
 
     override val connectionState: Flow<ConnectionState> = connectionStateSharedFlow.asSharedFlow()
+    override val incomingData: Flow<ByteArray> = incomingDataSharedFlow.asSharedFlow()
 
     @SuppressLint("MissingPermission")
     override fun connectToDevice(macAddress: String): Flow<Result<Boolean>> = flow {
@@ -134,6 +138,64 @@ class BleL2capImpl(
             bytesRead?.let {
                 Result.success(response.copyOfRange(0, it))
             } ?: Result.failure(Exception("Failed to read response"))
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+        emit(result)
+    }.flowOn(ioDispatcher)
+
+    @SuppressLint("MissingPermission")
+    override fun startReceivingData(): Flow<Result<Boolean>> = flow {
+        val result = try {
+            if (bluetoothSocket == null) {
+                throw Exception("Bluetooth socket is null")
+            }
+            if (isReceiving) {
+                throw Exception("Already receiving data")
+            }
+            
+            isReceiving = true
+            receivingJob = CoroutineScope(ioDispatcher).launch {
+                try {
+                    val inputStream = bluetoothSocket?.inputStream
+                    val buffer = ByteArray(1024)
+                    
+                    while (isReceiving && bluetoothSocket?.isConnected == true) {
+                        try {
+                            val bytesRead = inputStream?.read(buffer)
+                            if (bytesRead != null && bytesRead > 0) {
+                                val receivedData = buffer.copyOfRange(0, bytesRead)
+                                incomingDataSharedFlow.emit(receivedData)
+                            }
+                        } catch (e: Exception) {
+                            if (isReceiving) {
+                                // Only emit error if we're still supposed to be receiving
+                                // Socket might have been closed intentionally
+                                throw e
+                            }
+                            break
+                        }
+                    }
+                } catch (e: Exception) {
+                    isReceiving = false
+                    throw e
+                }
+            }
+            
+            Result.success(true)
+        } catch (e: Exception) {
+            isReceiving = false
+            Result.failure(e)
+        }
+        emit(result)
+    }.flowOn(ioDispatcher)
+
+    override fun stopReceivingData(): Flow<Result<Boolean>> = flow {
+        val result = try {
+            isReceiving = false
+            receivingJob?.cancel()
+            receivingJob = null
+            Result.success(true)
         } catch (e: Exception) {
             Result.failure(e)
         }
