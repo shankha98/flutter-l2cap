@@ -11,12 +11,15 @@ import CoreBluetooth
 public typealias DefaultCompletion = (Bool)->Void
 public typealias ConnectionStateCompletion = (Int)->Void
 public typealias SendCompletion = (Int16)->Void
+public typealias DataReceivedCompletion = (Data)->Void
 
 public protocol BluetoothRepresentable {
     func connectToDevice(deviceId: String, completion: @escaping DefaultCompletion)
     func disconnectFromDevice(deviceId: String, completion: @escaping DefaultCompletion)
     func createL2CapChannel(psm: UInt16, completion: @escaping DefaultCompletion)
     func sendMessage(message: Data, completion: @escaping SendCompletion)
+    func startReceivingData(completion: @escaping DefaultCompletion)
+    func stopReceivingData(completion: @escaping DefaultCompletion)
 }
 
 public class BluetoothManager: NSObject, CBPeripheralManagerDelegate {
@@ -31,6 +34,9 @@ public class BluetoothManager: NSObject, CBPeripheralManagerDelegate {
     private var connectionStateCompletion: ConnectionStateCompletion?
     private var createChannelCompletion: DefaultCompletion?
     private var sendDataCompletion: SendCompletion?
+    private var startReceivingCompletion: DefaultCompletion?
+    private var stopReceivingCompletion: DefaultCompletion?
+    private var isReceivingData = false
 
     private var channel: CBL2CAPChannel?
     private var sendDataQueue = DispatchQueue(label: "BLE_QUEUE", qos: .userInitiated, attributes: [], autoreleaseFrequency: .workItem, target: nil)
@@ -234,6 +240,29 @@ extension BluetoothManager: BluetoothRepresentable {
         self.send()
     }
     
+    public func startReceivingData(completion: @escaping DefaultCompletion) {
+        self.startReceivingCompletion = completion
+        
+        guard let channel = self.channel else {
+            completion(false)
+            return
+        }
+        
+        guard !isReceivingData else {
+            completion(false) // Already receiving
+            return
+        }
+        
+        isReceivingData = true
+        completion(true)
+    }
+    
+    public func stopReceivingData(completion: @escaping DefaultCompletion) {
+        self.stopReceivingCompletion = completion
+        isReceivingData = false
+        completion(true)
+    }
+    
     private func send() {
         
         guard let ostream = self.channel?.outputStream  else{
@@ -255,6 +284,43 @@ extension BluetoothManager: BluetoothRepresentable {
 
 extension BluetoothManager: StreamDelegate {
     
-    public func stream(_ aStream: Stream, handle eventCode: Stream.Event) {}
+    public func stream(_ aStream: Stream, handle eventCode: Stream.Event) {
+        switch eventCode {
+        case .hasBytesAvailable:
+            if isReceivingData, let inputStream = aStream as? InputStream {
+                self.readIncomingData(from: inputStream)
+            }
+        case .hasSpaceAvailable:
+            // Handle space available for writing if needed
+            break
+        case .errorOccurred:
+            print("Stream error occurred")
+        case .endEncountered:
+            print("Stream ended")
+            isReceivingData = false
+        default:
+            break
+        }
+    }
+    
+    private func readIncomingData(from inputStream: InputStream) {
+        let bufferSize = 1024
+        let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
+        defer { buffer.deallocate() }
+        
+        let bytesRead = inputStream.read(buffer, maxLength: bufferSize)
+        
+        if bytesRead > 0 {
+            let data = Data(bytes: buffer, count: bytesRead)
+            self.sendIncomingData(data: data)
+        } else if bytesRead < 0 {
+            print("Error reading from stream")
+        }
+    }
+    
+    private func sendIncomingData(data: Data) {
+        let dataToSend = ["data": data]
+        NotificationCenter.default.post(name: Notification.Name("getIncomingDataNotification"), object: nil, userInfo: dataToSend)
+    }
 }
 

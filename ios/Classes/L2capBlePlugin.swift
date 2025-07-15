@@ -1,51 +1,54 @@
 import Flutter
 import UIKit
 
-public class L2capBlePlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
+public class L2capBlePlugin: NSObject, FlutterPlugin {
     
-    
-    private var eventSink: FlutterEventSink?
+    private var connectionStateEventSink: FlutterEventSink?
+    private var incomingDataEventSink: FlutterEventSink?
 
     public static func register(with registrar: FlutterPluginRegistrar) {
         let channel = FlutterMethodChannel(name: "l2cap_ble", binaryMessenger: registrar.messenger())
         let instance = L2capBlePlugin()
         registrar.addMethodCallDelegate(instance, channel: channel)
         
-
-        // Register the event channel
-        let eventChannel = FlutterEventChannel(name: "getConnectionState", binaryMessenger: registrar.messenger())
-        eventChannel.setStreamHandler(instance)
+        // Register the connection state event channel
+        let connectionStateEventChannel = FlutterEventChannel(name: "getConnectionState", binaryMessenger: registrar.messenger())
+        connectionStateEventChannel.setStreamHandler(ConnectionStateStreamHandler(plugin: instance))
+        
+        // Register the incoming data event channel
+        let incomingDataEventChannel = FlutterEventChannel(name: "getIncomingData", binaryMessenger: registrar.messenger())
+        incomingDataEventChannel.setStreamHandler(IncomingDataStreamHandler(plugin: instance))
     }
     
     override private init() {
         super.init()
     }
     
-    public func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
-        self.eventSink = events
-        NotificationCenter.default.addObserver(
-             self,
-             selector: #selector(L2capBlePlugin.getConnectionState(notification:)),
-             name: Notification.Name("getConnectionStateNotification"),
-             object: nil)
-        return nil
+    func setConnectionStateEventSink(_ eventSink: FlutterEventSink?) {
+        self.connectionStateEventSink = eventSink
     }
     
-    public func onCancel(withArguments arguments: Any?) -> FlutterError? {
-        self.eventSink = nil
-        return nil
+    func setIncomingDataEventSink(_ eventSink: FlutterEventSink?) {
+        self.incomingDataEventSink = eventSink
     }
     
     @objc func getConnectionState(notification: Notification) {
-        // Ensure there is an eventSink before sending the event
-        
-        guard let eventSink = self.eventSink,
+        guard let eventSink = self.connectionStateEventSink,
         let userInfo = notification.userInfo,
         let updatedState = userInfo["state"] as? Int32 else {
             return
         }
-        // Emit the connection state as an event
         eventSink(updatedState)
+    }
+    
+    @objc func getIncomingData(notification: Notification) {
+        guard let eventSink = self.incomingDataEventSink,
+        let userInfo = notification.userInfo,
+        let data = userInfo["data"] as? Data else {
+            return
+        }
+        let flutterData = FlutterStandardTypedData(bytes: data)
+        eventSink(flutterData)
     }
     
     public func handle(_ call: FlutterMethodCall, result: @escaping FlutterResult) {
@@ -106,6 +109,26 @@ public class L2capBlePlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
                     result(nil)
                 }
             }
+        case "startReceivingData":
+            BluetoothManager.shared.startReceivingData { status in
+                if status {
+                    print("Started receiving data")
+                    result(true)
+                } else {
+                    print("Failed to start receiving data")
+                    result(false)
+                }
+            }
+        case "stopReceivingData":
+            BluetoothManager.shared.stopReceivingData { status in
+                if status {
+                    print("Stopped receiving data")
+                    result(true)
+                } else {
+                    print("Failed to stop receiving data")
+                    result(false)
+                }
+            }
         default:
             result(FlutterMethodNotImplemented)
         }
@@ -122,5 +145,57 @@ public class L2capBlePlugin: NSObject, FlutterPlugin, FlutterStreamHandler {
     func convertInt16ToData(_ value: Int16) -> Data {
         var intValue = value
         return Data(bytes: &intValue, count: MemoryLayout<Int16>.size)
+    }
+}
+
+// MARK: - Stream Handlers
+
+class ConnectionStateStreamHandler: NSObject, FlutterStreamHandler {
+    private weak var plugin: L2capBlePlugin?
+    
+    init(plugin: L2capBlePlugin) {
+        self.plugin = plugin
+        super.init()
+    }
+    
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        plugin?.setConnectionStateEventSink(events)
+        NotificationCenter.default.addObserver(
+            plugin!,
+            selector: #selector(L2capBlePlugin.getConnectionState(notification:)),
+            name: Notification.Name("getConnectionStateNotification"),
+            object: nil)
+        return nil
+    }
+    
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        plugin?.setConnectionStateEventSink(nil)
+        NotificationCenter.default.removeObserver(plugin!, name: Notification.Name("getConnectionStateNotification"), object: nil)
+        return nil
+    }
+}
+
+class IncomingDataStreamHandler: NSObject, FlutterStreamHandler {
+    private weak var plugin: L2capBlePlugin?
+    
+    init(plugin: L2capBlePlugin) {
+        self.plugin = plugin
+        super.init()
+    }
+    
+    func onListen(withArguments arguments: Any?, eventSink events: @escaping FlutterEventSink) -> FlutterError? {
+        plugin?.setIncomingDataEventSink(events)
+        NotificationCenter.default.addObserver(
+            plugin!,
+            selector: #selector(L2capBlePlugin.getIncomingData(notification:)),
+            name: Notification.Name("getIncomingDataNotification"),
+            object: nil)
+        return nil
+    }
+    
+    func onCancel(withArguments arguments: Any?) -> FlutterError? {
+        plugin?.setIncomingDataEventSink(nil)
+        NotificationCenter.default.removeObserver(plugin!, name: Notification.Name("getIncomingDataNotification"), object: nil)
+        return nil
     }
 }
