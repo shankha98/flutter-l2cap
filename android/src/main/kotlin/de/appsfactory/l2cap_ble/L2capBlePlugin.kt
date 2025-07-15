@@ -15,7 +15,6 @@ import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
 import io.flutter.Log
 import io.flutter.plugin.common.EventChannel
-import io.flutter.plugin.common.PluginRegistry.Registrar
 import kotlin.Result as KResult
 
 /** L2capBlePlugin */
