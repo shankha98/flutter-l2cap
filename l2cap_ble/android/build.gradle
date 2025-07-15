@@ -25,6 +25,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 
 android {
+    namespace 'de.appsfactory.l2cap_ble'
     compileSdkVersion 31
 
     compileOptions {
