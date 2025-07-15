@@ -10,21 +10,25 @@ class MethodChannelL2capBle extends L2capBlePlatform {
   @visibleForTesting
   final methodChannel = const MethodChannel('l2cap_ble');
 
- @override
+  @override
   Future<bool> connectToDevice(String deviceId) async {
-    final success = await methodChannel.invokeMethod<bool>('connectToDevice', {'deviceId': deviceId});
+    final success = await methodChannel
+        .invokeMethod<bool>('connectToDevice', {'deviceId': deviceId});
     return success ?? false;
   }
 
   @override
   Future<bool> disconnectFromDevice(String deviceId) async {
-    final success = await methodChannel.invokeMethod<bool>('disconnectFromDevice', {'deviceId': deviceId});
+    final success = await methodChannel
+        .invokeMethod<bool>('disconnectFromDevice', {'deviceId': deviceId});
     return success ?? false;
   }
 
   @override
   Stream<L2CapConnectionState> getConnectionState() {
-    final stream = const EventChannel('getConnectionState').receiveBroadcastStream().cast<int>();
+    final stream = const EventChannel('getConnectionState')
+        .receiveBroadcastStream()
+        .cast<int>();
     return stream.asyncMap((event) {
       debugPrint('new connection state is $event');
       switch (event) {
@@ -46,13 +50,15 @@ class MethodChannelL2capBle extends L2capBlePlatform {
 
   @override
   Future<bool> createL2capChannel(int psm) async {
-    final success = await methodChannel.invokeMethod<bool>('createL2capChannel', {'psm': psm});
+    final success = await methodChannel
+        .invokeMethod<bool>('createL2capChannel', {'psm': psm});
     return success ?? false;
   }
 
   @override
   Future<Uint8List> sendMessage(Uint8List message) async {
-    final response = await methodChannel.invokeMethod<Uint8List>('sendMessage', {'message': message});
+    final response = await methodChannel
+        .invokeMethod<Uint8List>('sendMessage', {'message': message});
     return response ?? Uint8List.fromList([]);
   }
 }

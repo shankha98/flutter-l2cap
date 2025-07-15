@@ -31,7 +31,8 @@ abstract class L2capBlePlatform extends PlatformInterface {
   }
 
   Future<bool> disconnectFromDevice(String deviceId) {
-    throw UnimplementedError('disconnectFromDevice() has not been implemented.');
+    throw UnimplementedError(
+        'disconnectFromDevice() has not been implemented.');
   }
 
   Stream<L2CapConnectionState> getConnectionState() {
