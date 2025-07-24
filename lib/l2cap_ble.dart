@@ -13,10 +13,12 @@ class L2capBle {
       L2capBlePlatform.instance.getIncomingData();
   Future<bool> createL2capChannel(int psm) =>
       L2capBlePlatform.instance.createL2capChannel(psm);
-  Future<Uint8List> sendMessage(Uint8List message) =>
-      L2capBlePlatform.instance.sendMessage(message);
-  Future<bool> startReceivingData() =>
-      L2capBlePlatform.instance.startReceivingData();
+  Future<Uint8List> sendMessage(Uint8List message,
+          {int responseBufferSize = 1024}) =>
+      L2capBlePlatform.instance
+          .sendMessage(message, responseBufferSize: responseBufferSize);
+  Future<bool> startReceivingData({int bufferSize = 1024}) =>
+      L2capBlePlatform.instance.startReceivingData(bufferSize: bufferSize);
   Future<bool> stopReceivingData() =>
       L2capBlePlatform.instance.stopReceivingData();
 }

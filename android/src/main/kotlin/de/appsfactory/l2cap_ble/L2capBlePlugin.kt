@@ -70,14 +70,16 @@ class L2capBlePlugin : FlutterPlugin, MethodCallHandler, EventChannel.StreamHand
         } else if (call.method == "sendMessage") {
             CoroutineScope(Dispatchers.Main).launch {
                 val message: ByteArray = requireNotNull(call.argument("message"))
-                bleL2capImpl.sendMessage(message).collect { res: KResult<ByteArray> ->
+                val responseBufferSize: Int = call.argument("responseBufferSize") ?: 1024
+                bleL2capImpl.sendMessage(message, responseBufferSize).collect { res: KResult<ByteArray> ->
                     Log.d("L2capBlePlugin", "sendMessage: $res")
                     res.mapToResult(result)
                 }
             }
         } else if (call.method == "startReceivingData") {
             CoroutineScope(Dispatchers.Main).launch {
-                bleL2capImpl.startReceivingData().collect { res: KResult<Boolean> ->
+                val bufferSize: Int = call.argument("bufferSize") ?: 1024
+                bleL2capImpl.startReceivingData(bufferSize).collect { res: KResult<Boolean> ->
                     Log.d("L2capBlePlugin", "startReceivingData: $res")
                     res.mapToResult(result)
                 }

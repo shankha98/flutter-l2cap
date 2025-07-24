@@ -49,10 +49,38 @@ Use createL2capChannel to establish the L2CAP channel, providing the required ps
 final channelCreated = await ble.createL2capChannel(psm);
 ````
 ### Exchange Messages:
-Send and receive messages seamlessly via the L2CAP channel with sendMessage.
+Send and receive messages seamlessly via the L2CAP channel with sendMessage. You can optionally specify a custom response buffer size for expected larger responses.
 
 ```dart
+// Default buffer size (1024 bytes)
 final response = await ble.sendMessage(myMessage);
+
+// Custom response buffer size for larger responses
+final response = await ble.sendMessage(myMessage, responseBufferSize: 3200);
+````
+
+### Start Receiving Data:
+Start receiving continuous data from the device. You can specify a custom buffer size to handle larger data packets.
+
+```dart
+// Default buffer size (1024 bytes)
+await ble.startReceivingData();
+
+// Custom buffer size for larger data packets
+await ble.startReceivingData(bufferSize: 3200);
+
+// Listen to incoming data
+ble.getIncomingData().listen((data) {
+  // Process received data
+  print('Received ${data.length} bytes');
+});
+````
+
+### Stop Receiving Data:
+Stop the continuous data receiving process.
+
+```dart
+await ble.stopReceivingData();
 ````
 ### Disconnect Gracefully:
 Disconnect using disconnectFromDevice. The L2CAP channel closes automatically.

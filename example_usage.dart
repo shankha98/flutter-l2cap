@@ -74,7 +74,10 @@ class _L2CapExampleState extends State<L2CapExample> {
           debugPrint('L2CAP channel created');
 
           // Step 3: Start receiving data
-          bool receivingStarted = await _l2capBle.startReceivingData();
+          // You can specify a custom buffer size (default is 1024)
+          // For larger data packets, use a bigger buffer size like 3200
+          bool receivingStarted =
+              await _l2capBle.startReceivingData(bufferSize: 3200);
 
           if (receivingStarted) {
             debugPrint('Started receiving data');

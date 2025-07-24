@@ -6,9 +6,11 @@ import 'package:l2cap_ble/l2cap_ble_method_channel.dart';
 import 'package:l2cap_ble/l2cap_ble_platform_interface.dart';
 import 'package:plugin_platform_interface/plugin_platform_interface.dart';
 
-class MockL2capBlePlatform with MockPlatformInterfaceMixin implements L2capBlePlatform {
+class MockL2capBlePlatform
+    with MockPlatformInterfaceMixin
+    implements L2capBlePlatform {
   @override
-  Future<bool> connectToDevice(String deviceId)async {
+  Future<bool> connectToDevice(String deviceId) async {
     return true;
   }
 
@@ -28,7 +30,23 @@ class MockL2capBlePlatform with MockPlatformInterfaceMixin implements L2capBlePl
   }
 
   @override
-  Future<Uint8List> sendMessage(Uint8List message) {
+  Stream<Uint8List> getIncomingData() {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<Uint8List> sendMessage(Uint8List message,
+      {int responseBufferSize = 1024}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> startReceivingData({int bufferSize = 1024}) {
+    throw UnimplementedError();
+  }
+
+  @override
+  Future<bool> stopReceivingData() {
     throw UnimplementedError();
   }
 }

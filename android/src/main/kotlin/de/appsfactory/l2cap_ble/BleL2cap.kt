@@ -13,9 +13,9 @@ interface BleL2cap {
 
     fun createL2capChannel(psm: Int): Flow<Result<Boolean>>
 
-    fun sendMessage(message: ByteArray): Flow<Result<ByteArray>>
+    fun sendMessage(message: ByteArray, responseBufferSize: Int = 1024): Flow<Result<ByteArray>>
 
-    fun startReceivingData(): Flow<Result<Boolean>>
+    fun startReceivingData(bufferSize: Int = 1024): Flow<Result<Boolean>>
 
     fun stopReceivingData(): Flow<Result<Boolean>>
 }

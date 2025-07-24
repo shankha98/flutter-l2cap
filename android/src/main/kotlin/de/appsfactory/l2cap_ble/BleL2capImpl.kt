@@ -124,14 +124,14 @@ class BleL2capImpl(
     }.flowOn(ioDispatcher)
 
     @SuppressLint("MissingPermission")
-    override fun sendMessage(message: ByteArray): Flow<Result<ByteArray>> = flow {
+    override fun sendMessage(message: ByteArray, responseBufferSize: Int): Flow<Result<ByteArray>> = flow {
         val result = try {
             if (bluetoothSocket == null) {
                 throw Exception("Bluetooth socket is null")
             }
             bluetoothSocket?.outputStream?.write(message)
             // Now, we should read the response from the input stream
-            val response = ByteArray(1024) // Adjust the size depending on the expected response
+            val response = ByteArray(responseBufferSize) // Buffer size is now configurable
             val bytesRead = bluetoothSocket?.inputStream?.read(response)
             // It's important to note that the above read call is blocking.
             // You might want to wrap it with 'withTimeout' to prevent it from blocking indefinitely.
@@ -145,7 +145,7 @@ class BleL2capImpl(
     }.flowOn(ioDispatcher)
 
     @SuppressLint("MissingPermission")
-    override fun startReceivingData(): Flow<Result<Boolean>> = flow {
+    override fun startReceivingData(bufferSize: Int): Flow<Result<Boolean>> = flow {
         val result = try {
             if (bluetoothSocket == null) {
                 throw Exception("Bluetooth socket is null")
@@ -158,7 +158,7 @@ class BleL2capImpl(
             receivingJob = CoroutineScope(ioDispatcher).launch {
                 try {
                     val inputStream = bluetoothSocket?.inputStream
-                    val buffer = ByteArray(1024)
+                    val buffer = ByteArray(bufferSize)
                     
                     while (isReceiving && bluetoothSocket?.isConnected == true) {
                         try {

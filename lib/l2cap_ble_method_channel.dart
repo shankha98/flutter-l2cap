@@ -67,16 +67,22 @@ class MethodChannelL2capBle extends L2capBlePlatform {
   }
 
   @override
-  Future<Uint8List> sendMessage(Uint8List message) async {
-    final response = await methodChannel
-        .invokeMethod<Uint8List>('sendMessage', {'message': message});
+  Future<Uint8List> sendMessage(Uint8List message,
+      {int responseBufferSize = 1024}) async {
+    final response =
+        await methodChannel.invokeMethod<Uint8List>('sendMessage', {
+      'message': message,
+      'responseBufferSize': responseBufferSize,
+    });
     return response ?? Uint8List.fromList([]);
   }
 
   @override
-  Future<bool> startReceivingData() async {
+  Future<bool> startReceivingData({int bufferSize = 1024}) async {
     final success =
-        await methodChannel.invokeMethod<bool>('startReceivingData');
+        await methodChannel.invokeMethod<bool>('startReceivingData', {
+      'bufferSize': bufferSize,
+    });
     return success ?? false;
   }
 

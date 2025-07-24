@@ -47,11 +47,12 @@ abstract class L2capBlePlatform extends PlatformInterface {
     throw UnimplementedError('createL2capChannel() has not been implemented.');
   }
 
-  Future<Uint8List> sendMessage(Uint8List message) {
+  Future<Uint8List> sendMessage(Uint8List message,
+      {int responseBufferSize = 1024}) {
     throw UnimplementedError('sendMessage() has not been implemented.');
   }
 
-  Future<bool> startReceivingData() {
+  Future<bool> startReceivingData({int bufferSize = 1024}) {
     throw UnimplementedError('startReceivingData() has not been implemented.');
   }
 

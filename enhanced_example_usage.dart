@@ -86,7 +86,9 @@ class _L2CapExampleState extends State<L2CapExample> {
           debugPrint('L2CAP channel created');
 
           // Step 3: Start receiving data
-          bool receivingStarted = await _l2capBle.startReceivingData();
+          // Using a larger buffer for enhanced data handling
+          bool receivingStarted =
+              await _l2capBle.startReceivingData(bufferSize: 3200);
 
           if (receivingStarted) {
             setState(() {
@@ -159,7 +161,9 @@ class _L2CapExampleState extends State<L2CapExample> {
       String testMessage = "Hello from Flutter!";
       Uint8List messageBytes = Uint8List.fromList(testMessage.codeUnits);
 
-      Uint8List response = await _l2capBle.sendMessage(messageBytes);
+      // Send message with custom response buffer size if expecting large responses
+      Uint8List response =
+          await _l2capBle.sendMessage(messageBytes, responseBufferSize: 2048);
 
       if (response.isNotEmpty) {
         String responseString = String.fromCharCodes(response);
