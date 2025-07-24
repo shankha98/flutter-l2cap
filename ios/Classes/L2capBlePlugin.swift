@@ -98,8 +98,10 @@ public class L2capBlePlugin: NSObject, FlutterPlugin {
             if let arguments = call.arguments as? [String: Any],
                let message = arguments["message"] as? FlutterStandardTypedData {
                 
+                let responseBufferSize = arguments["responseBufferSize"] as? Int ?? 1024
+                
                 if let byteArray = self.parseFlutterStandardTypedDataToData(message) {
-                    BluetoothManager.shared.sendMessage(message: byteArray) { response in
+                    BluetoothManager.shared.sendMessage(message: byteArray, responseBufferSize: responseBufferSize) { response in
                         let data = self.convertInt16ToData(response)
                         let stringValue = String(data: data, encoding: .utf8) ?? ""
                         print("Returned data is \(response) \(stringValue)")
@@ -110,9 +112,12 @@ public class L2capBlePlugin: NSObject, FlutterPlugin {
                 }
             }
         case "startReceivingData":
-            BluetoothManager.shared.startReceivingData { status in
+            let arguments = call.arguments as? [String: Any]
+            let bufferSize = arguments?["bufferSize"] as? Int ?? 1024
+            
+            BluetoothManager.shared.startReceivingData(bufferSize: bufferSize) { status in
                 if status {
-                    print("Started receiving data")
+                    print("Started receiving data with buffer size: \(bufferSize)")
                     result(true)
                 } else {
                     print("Failed to start receiving data")

@@ -17,8 +17,8 @@ public protocol BluetoothRepresentable {
     func connectToDevice(deviceId: String, completion: @escaping DefaultCompletion)
     func disconnectFromDevice(deviceId: String, completion: @escaping DefaultCompletion)
     func createL2CapChannel(psm: UInt16, completion: @escaping DefaultCompletion)
-    func sendMessage(message: Data, completion: @escaping SendCompletion)
-    func startReceivingData(completion: @escaping DefaultCompletion)
+    func sendMessage(message: Data, responseBufferSize: Int, completion: @escaping SendCompletion)
+    func startReceivingData(bufferSize: Int, completion: @escaping DefaultCompletion)
     func stopReceivingData(completion: @escaping DefaultCompletion)
 }
 
@@ -37,6 +37,7 @@ public class BluetoothManager: NSObject, CBPeripheralManagerDelegate {
     private var startReceivingCompletion: DefaultCompletion?
     private var stopReceivingCompletion: DefaultCompletion?
     private var isReceivingData = false
+    private var currentBufferSize = 1024
 
     private var channel: CBL2CAPChannel?
     private var sendDataQueue = DispatchQueue(label: "BLE_QUEUE", qos: .userInitiated, attributes: [], autoreleaseFrequency: .workItem, target: nil)
@@ -231,7 +232,7 @@ extension BluetoothManager: BluetoothRepresentable {
         }
     }
     
-    public func sendMessage(message: Data, completion: @escaping SendCompletion) {
+    public func sendMessage(message: Data, responseBufferSize: Int = 1024, completion: @escaping SendCompletion) {
 
         self.sendDataCompletion = completion
         sendDataQueue.sync  {
@@ -240,8 +241,9 @@ extension BluetoothManager: BluetoothRepresentable {
         self.send()
     }
     
-    public func startReceivingData(completion: @escaping DefaultCompletion) {
+    public func startReceivingData(bufferSize: Int = 1024, completion: @escaping DefaultCompletion) {
         self.startReceivingCompletion = completion
+        self.currentBufferSize = bufferSize
         
         guard let channel = self.channel else {
             completion(false)
@@ -304,7 +306,7 @@ extension BluetoothManager: StreamDelegate {
     }
     
     private func readIncomingData(from inputStream: InputStream) {
-        let bufferSize = 1024
+        let bufferSize = currentBufferSize
         let buffer = UnsafeMutablePointer<UInt8>.allocate(capacity: bufferSize)
         defer { buffer.deallocate() }
         
